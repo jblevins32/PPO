@@ -1,0 +1,5 @@
+[console_scripts]
+deploy = turtlebot3_ppo.deploy:main
+train = turtlebot3_ppo.train:main
+turtlebot3_env = turtlebot3_ppo.turtlebot3_env:main
+
