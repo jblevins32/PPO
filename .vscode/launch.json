@@ -5,7 +5,7 @@
             "name": "Python: ROS2 Debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/turtlebot3_ppo/turtlebot3_ppo/train.py",  // Adjust the path to your training script
+            "program": "${workspaceFolder}/src/turtlebot3_ppo/train.py",  // Adjust the path to script
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/install/lib/python3.8/site-packages"
