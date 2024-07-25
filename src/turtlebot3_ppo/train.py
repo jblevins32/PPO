@@ -24,31 +24,31 @@ def main(args=None):
     env = TurtleBot3Env()
     agent = PPOAgent(env)
 
-    n_episodes = 100
+    n_episodes = 30
     max_timesteps = 1000
 
-    # Stop the robot by running the stop_robot script
+    # Setup stop object
     stop = StopRobot()
     
     # Start up turtlebot sim environment
     os.environ['TURTLEBOT3_MODEL'] = 'burger'
     subprocess.Popen(['ros2', 'launch', 'turtlebot3_gazebo', 'turtlebot3_world.launch.py']) # If you need to open the simulation
-    # reset_gazebo_world() # Reset the Gazebo world at the end of the episode
     rewards = []
 
     for episode in range(n_episodes):
-        state = env.reset()
+        state = env.reset() # Initial run of the environment node to get initial states
         memory = []
         total_reward = 0
-        for t in range(max_timesteps):
+        for t in range(max_timesteps): # episode lasts for a specific time period
             action, log_prob = agent.select_action(state) # Select best action based on the policy
-            next_state, reward, done, _ = env.step(action) # Take the next step according to the chosen action
+            next_state, reward, done, _ = env.step(action) # Take the next step according to the chosen action and store the next sensor readings and reward of current action
             memory.append((state, action, reward, done, log_prob)) # Store relevant info
             state = next_state
             total_reward += reward
             if done:
                 break
-        stop.stop_robot()
+            
+        stop.stop_robot() # Stop the robot motion by calling stop node
         reset_gazebo_world() # Reset the Gazebo world at the end of the episode
         
         # Save the reward for plotting
@@ -62,11 +62,10 @@ def main(args=None):
     torch.save(agent.actor_critic.state_dict(), 'ppo_model.pth')
     env.close()
     
-    # Plot the rewards
-    plt.plot(rewards)
+    # Plot the rewards from each training episode which should increase over time
+    plt.plot(rewards, color = 'blue')
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
-    plt.title('Total Reward vs Episode')
     plt.show()
 
 if __name__ == '__main__':
