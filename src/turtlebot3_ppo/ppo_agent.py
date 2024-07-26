@@ -37,63 +37,64 @@ class PPOAgent:
         self.actor_critic = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0]) # Initialize the actor-critic network with the appropriate dimensions
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate) # Initialize optimizer to update the gradients in train(). Adam (Adaptive Moment Estimation) is like stochastic gradient descent but...
         
-        # Another network to store the old policy
+        # Another network to store the old policy to compare to the updated policy
         self.policy_old = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0])
-        self.policy_old.load_state_dict(self.actor_critic.state_dict())
+        self.policy_old.load_state_dict(self.actor_critic.state_dict()) 
     
     # Select action of robot based on the current policy and state (sensor readings). Initializes as random, but learns to make correct decisions in training portion
     def select_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0) # convert state to tensor and add batch dimension () so we can run it through the network
-        with torch.no_grad(): # disable gradient calculation to just inference: no backpropogation
+        with torch.no_grad(): # disable gradient calculation to just inference: no backpropogation because we don't want to update here
             action_mean, action_std, _ = self.policy_old(state)
         action_dist = torch.distributions.Normal(action_mean, action_std) # create a normal distribution based on this mean and std 
         action = action_dist.sample() # sample from the gaussian
         action_log_prob = action_dist.log_prob(action) # what is the log probability of the chosen action?
         return action.numpy(), action_log_prob.numpy()
 
-    def train(self, memory, max_timesteps):
+    # Calculate discounted rewards: cumulative rewards that discount the future rewards in our reward tensor
+    def discount_rewards(self, rewards):
+        discounted_rewards = torch.zeros_like(rewards)  # Initialize tensor for discounted rewards
+        G = 0  # Initialize cumulative reward
+        
+        for t in reversed(range(len(rewards))):
+            G = rewards[t] + self.gamma * G  # Compute cumulative reward
+            discounted_rewards[t] = G  # Store cumulative reward
+            
+        return discounted_rewards
+    
+    def train(self, memory, timesteps):
         states, actions, rewards, dones, log_probs_old = zip(*memory) # extract data from the buffer
         
-        # Convert to tensors
-        states = torch.FloatTensor(states) # size: max_timesteps x num_states
-        actions = torch.FloatTensor(np.array(actions).reshape(max_timesteps, 2))
-        rewards = torch.FloatTensor(rewards)
-        dones = torch.FloatTensor(dones)
-        log_probs_old = torch.FloatTensor(np.array(log_probs_old).reshape(max_timesteps, 2))
-        log_probs_old = log_probs_old.sum(axis=1)
+        # Convert lists to numpy arrays
+        states = np.array(states)
+        actions = np.array(actions).reshape(timesteps, 2)
+        rewards = np.array(rewards)
+        dones = np.array(dones)
+        log_probs_old = np.array(log_probs_old).reshape(timesteps, 2)
+
+        # Convert numpy arrays to tensors
+        states = torch.tensor(states, dtype=torch.float32)  # size: max_timesteps x num_states
+        actions = torch.tensor(actions, dtype=torch.float32)
+        rewards = torch.tensor(rewards, dtype=torch.float32)
+        dones = torch.tensor(dones, dtype=torch.float32)
+        log_probs_old = torch.tensor(log_probs_old, dtype=torch.float32).sum(axis=1)
         
-        # Convert to tensors
-        # states = torch.FloatTensor(states)
-        # actions = torch.FloatTensor(actions).squeeze(1)
-        # rewards = torch.FloatTensor(rewards)
-        # dones = torch.FloatTensor(dones)
-        # log_probs_old = torch.FloatTensor(log_probs_old).squeeze(1)
-        
-        # Calculate discounted rewards: cumulative rewards that discount the future rewards
-        discounted_rewards = []
-        for t in range(len(rewards)):
-            G = 0 # initialize cumulative reward
-            pw = 0 # initialize power
-            for r in rewards[t:]:
-                G = G + self.gamma ** pw * r
-                pw = pw + 1
-            discounted_rewards.append(G)
-        discounted_rewards = torch.FloatTensor(discounted_rewards)
+        discounted_rewards = self.discount_rewards(rewards)
         
         for _ in range(self.k_epochs):
-            action_means, action_stds, state_values = self.actor_critic(states)
+            action_means, action_stds, state_values = self.actor_critic(states) # get output of actor and critic network
             action_dists = Normal(action_means, action_stds)
             log_probs = action_dists.log_prob(actions).sum(axis=1)
             
             ratios = torch.exp(log_probs - log_probs_old) # probability ratio for old and new policies. How much does the new policy deviate from the old policy.
-            advantages = discounted_rewards - state_values.squeeze() # How much better it is to take the specific action compared to the average actions
+            advantages = discounted_rewards - state_values.squeeze() # How much better it is to take the specific action compared to the average actions (this is the critic critiquing the actor)
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon) * advantages # clipped surrogate loss to prevent instability
             
             loss = -torch.min(surr1, surr2).mean() + 0.5 * (discounted_rewards - state_values.squeeze()).pow(2).mean() # loss = policy loss + value loss
             
-            self.optimizer.zero_grad()
-            loss.backward() # compute gradients back propogation
+            self.optimizer.zero_grad() # clear gradients after each epoch
+            loss.backward() # compute gradients (back propogation)
             self.optimizer.step() # update the weights of the NN
         
         self.policy_old.load_state_dict(self.actor_critic.state_dict()) # update old policy as the new one

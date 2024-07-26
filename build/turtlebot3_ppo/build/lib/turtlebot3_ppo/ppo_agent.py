@@ -21,14 +21,14 @@ class ActorCritic(nn.Module):
     def forward(self, x): # x is state. Cannot input any inf or nan values
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        action_mean = self.actor_mean(x)
+        action_mean = self.actor_mean(x) # run the network through the final actor layer
         action_log_std = self.actor_log_std(x)
         action_std = torch.exp(action_log_std)
-        state_value = self.critic(x)
+        state_value = self.critic(x) # run the network through the final critic layer to get the value function
         return action_mean, action_std, state_value
 
 class PPOAgent:
-    def __init__(self, env, learning_rate=1e-4, gamma=0.99, epsilon=0.2, k_epochs=10): # adjust training hyperparameters here
+    def __init__(self, env, learning_rate=1e-4, gamma=0.99, epsilon=0.2, k_epochs=100): # adjust training hyperparameters here
         self.env = env
         self.gamma = gamma
         self.epsilon = epsilon
@@ -37,14 +37,14 @@ class PPOAgent:
         self.actor_critic = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0]) # Initialize the actor-critic network with the appropriate dimensions
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate) # Initialize optimizer to update the gradients in train(). Adam (Adaptive Moment Estimation) is like stochastic gradient descent but...
         
-        # Another network to store the old policy
+        # Another network to store the old policy to compare to the updated policy
         self.policy_old = ActorCritic(env.observation_space.shape[0], env.action_space.shape[0])
-        self.policy_old.load_state_dict(self.actor_critic.state_dict())
+        self.policy_old.load_state_dict(self.actor_critic.state_dict()) 
     
-    # Select action of robot based on the current policy and state (sensor readings). Initializes as random, but learns to make correct decisions.
+    # Select action of robot based on the current policy and state (sensor readings). Initializes as random, but learns to make correct decisions in training portion
     def select_action(self, state):
-        state = torch.FloatTensor(state).unsqueeze(0) # convert state to tensor and add batch dimension ().
-        with torch.no_grad(): # disable gradient calculation to just inference: no backpropogation
+        state = torch.FloatTensor(state).unsqueeze(0) # convert state to tensor and add batch dimension () so we can run it through the network
+        with torch.no_grad(): # disable gradient calculation to just inference: no backpropogation because we don't want to update here
             action_mean, action_std, _ = self.policy_old(state)
         action_dist = torch.distributions.Normal(action_mean, action_std) # create a normal distribution based on this mean and std 
         action = action_dist.sample() # sample from the gaussian
@@ -52,10 +52,10 @@ class PPOAgent:
         return action.numpy(), action_log_prob.numpy()
 
     def train(self, memory, max_timesteps):
-        states, actions, rewards, dones, log_probs_old = zip(*memory)
+        states, actions, rewards, dones, log_probs_old = zip(*memory) # extract data from the buffer
         
         # Convert to tensors
-        states = torch.FloatTensor(states)
+        states = torch.FloatTensor(states) # size: max_timesteps x num_states
         actions = torch.FloatTensor(np.array(actions).reshape(max_timesteps, 2))
         rewards = torch.FloatTensor(rewards)
         dones = torch.FloatTensor(dones)
