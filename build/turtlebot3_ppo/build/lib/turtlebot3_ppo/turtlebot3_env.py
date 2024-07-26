@@ -12,9 +12,9 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
         super().__init__('turtlebot3_env')  # Initialize the node
         
         # Define action and observation spaces
-        self.action_space = spaces.Box(low=np.array([-0.2, -2.84]), high=np.array([0.2, 2.84]), dtype=np.float32)  # Continuous action spaces for linear velocity and angular velocity as defined by the turtlebot sim. (spaces.Box defines this continuous action space)
+        self.action_space = spaces.Box(low=np.array([-0.2, -2.8]), high=np.array([0.2, 2.8]), dtype=np.float32)  # Continuous action spaces for linear velocity and angular velocity as defined by the turtlebot sim. (spaces.Box defines this continuous action space)
         # Adjust observation space to include both LIDAR and odometry data
-        self.observation_space = spaces.Box(low=0, high=10, shape=(360+5,), dtype=np.float32)  # Setting sensor data range and shape of data (360 LIDAR points + NEED TO ADD 5 odometry values: x,y,theta,v,omega)
+        self.observation_space = spaces.Box(low=0, high=10, shape=(20+5,), dtype=np.float32)  # Setting sensor data range and shape of data (20 LIDAR points + 5 odometry values: x,y,theta,v,omega)
         
         # Create subscriptions and publisher
         self.lidar_sub = self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)  # Creating a subscriber for LIDAR data
@@ -55,9 +55,10 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
             }
         }
 
+    # Initialize the environment by "resetting" it
     def reset(self):
         self.done = False
-        rclpy.spin_once(self)
+        rclpy.spin_once(self) # Run this node once to get some data
         if self.lidar_data is None:
             raise RuntimeError("LIDAR data not received yet.")
         return self._get_state()  # Return the combined state (LIDAR + odometry)
@@ -68,40 +69,45 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
         cmd_vel.angular.z = float(action[0][1])
         self.cmd_vel_pub.publish(cmd_vel)  # Send the action to the cmd_vel topic
         
-        rclpy.spin_once(self)
+        rclpy.spin_once(self) # spin the node again to read the sensors
         if self.lidar_data is None or self.odom_data is None:
             raise RuntimeError("LIDAR or odometry data not received yet.")
         
         state = self._get_state()  # Get the combined state (LIDAR + odometry)
-        
+        reward, self.done = self.get_reward()
+        return state, reward, self.done, {}
+            
         # Reward function
+    def get_reward(self):
         cone_location = np.array([2, -0.5])  # Change according to where the cone is
         goal_dist = np.sqrt((self.odom_data['position']['x'] - cone_location[0]) ** 2 +
                             (self.odom_data['position']['y'] - cone_location[1]) ** 2)  # Euclidean distance between robot and the goal
         
-        min_20_distances = np.sort(self.lidar_data)[:20]  # Sort the distances, get the minimum 20 values
-        r_collision = np.mean(min_20_distances)  # Reward the robot for being far from obstacles
-        lr = 10 #learning rate for weighting getting to the goal as more important
+        r_collision = -1/np.mean(self.lidar_data)  # Reward the robot for being far from obstacles
+        lr = 20 #learning rate for weighting getting to the goal as more important
         r_goal = lr / (goal_dist + 1e-3)  # Reward the robot for being closer to the goal (avoid division by zero)
         r_non_stationary = (self.odom_data['linear_velocity']['x'] +  
                             self.odom_data['angular_velocity']['z'])  # Reward the robot for moving
         reward = r_collision + r_goal + r_non_stationary
         
-        if r_goal == .1:
+        if goal_dist <= .1:
             self.done = True
         
-        return state, reward, self.done, {}
+        return reward, self.done
 
     def clean_data(self):
-        # Clean data by removing inf values by replacing them with the max distance number of 10.
+        # Clean data by removing inf values by replacing them with the max distance number of 10
         inf_indices = np.isinf(self.lidar_data)
         self.lidar_data[inf_indices] = 10
         
+        # Sort the distances, get the minimum 20 values
+        self.lidar_data = np.sort(self.lidar_data)[:20]
+
     def _get_state(self):
         self.clean_data()
         # Concatenate LIDAR data with relevant odometry information
         if self.odom_data is None:
-            odom = np.array([0,0,0,0,0])
+            odom = np.array([-2,-.5,0,0,0]) # starting position for standard turtlebot sim is this
         else:
             odom = np.array([self.odom_data['position']['x'], self.odom_data['position']['y'], self.odom_data['orientation']['z'], self.odom_data['linear_velocity']['x'], self.odom_data['angular_velocity']['z']])
         state = np.concatenate([self.lidar_data, odom])  # Combine LIDAR and odometry data into a single state

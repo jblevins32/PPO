@@ -3,6 +3,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Imu
 import numpy as np
 import gym  # library for reinforcement learning environments
 from gym import spaces  # To define action and observation spaces
@@ -12,17 +13,19 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
         super().__init__('turtlebot3_env')  # Initialize the node
         
         # Define action and observation spaces
-        self.action_space = spaces.Box(low=np.array([-0.2, -2.8]), high=np.array([0.2, 2.8]), dtype=np.float32)  # Continuous action spaces for linear velocity and angular velocity as defined by the turtlebot sim. (spaces.Box defines this continuous action space)
+        self.action_space = spaces.Box(low=np.array([-.2, -2.8]), high=np.array([0.2, 2.8]), dtype=np.float32)  # Continuous action spaces for linear velocity and angular velocity as defined by the turtlebot sim. (spaces.Box defines this continuous action space)
         # Adjust observation space to include both LIDAR and odometry data
         self.observation_space = spaces.Box(low=0, high=10, shape=(20+5,), dtype=np.float32)  # Setting sensor data range and shape of data (20 LIDAR points + 5 odometry values: x,y,theta,v,omega)
         
         # Create subscriptions and publisher
         self.lidar_sub = self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)  # Creating a subscriber for LIDAR data
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)  # Creating a subscriber for odometry data
+        self.imu_sub = self.create_subscription(Imu, '/imu', self.imu_callback, 10)  # Creating a subscriber for imu data
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)  # Creating a publisher for command velocities
         
         self.lidar_data = None  # Store received LIDAR data
         self.odom_data = None  # Store received odometry data
+        self.imu_data = None  # Store received imu data
         self.done = False  # Flag for when episode is done
 
     def lidar_callback(self, msg):  # Convert LiDAR data into numpy array and store it
@@ -54,6 +57,26 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
                 'z': msg.twist.twist.angular.z
             }
         }
+        
+    def imu_callback(self, msg):
+        self.imu_data = {
+            'orientation': {
+                'x': msg.orientation.x,
+                'y': msg.orientation.y,
+                'z': msg.orientation.z,
+                'w': msg.orientation.w
+            },
+            'angular_velocity': {
+                'x': msg.angular_velocity.x,
+                'y': msg.angular_velocity.y,
+                'z': msg.angular_velocity.z
+            },
+            'linear_acceleration': {
+                'x': msg.linear_acceleration.x,
+                'y': msg.linear_acceleration.y,
+                'z': msg.linear_acceleration.z
+            }
+        }
 
     # Initialize the environment by "resetting" it
     def reset(self):
@@ -69,7 +92,7 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
         cmd_vel.angular.z = float(action[0][1])
         self.cmd_vel_pub.publish(cmd_vel)  # Send the action to the cmd_vel topic
         
-        rclpy.spin_once(self)
+        rclpy.spin_once(self) # spin the node again to read the sensors
         if self.lidar_data is None or self.odom_data is None:
             raise RuntimeError("LIDAR or odometry data not received yet.")
         
@@ -79,19 +102,33 @@ class TurtleBot3Env(Node, gym.Env):  # Class that inherits from Node and gym.Env
             
         # Reward function
     def get_reward(self):
+        # Reward the robot for being closer to the goal
         cone_location = np.array([2, -0.5])  # Change according to where the cone is
         goal_dist = np.sqrt((self.odom_data['position']['x'] - cone_location[0]) ** 2 +
                             (self.odom_data['position']['y'] - cone_location[1]) ** 2)  # Euclidean distance between robot and the goal
+        lr = 100 #learning rate for weighting getting to the goal as more important
+        r_goal = lr / np.exp((goal_dist + 1e-4))  # avoid division by zero
         
-        r_collision = -1/np.mean(self.lidar_data)  # Reward the robot for being far from obstacles
-        lr = 20 #learning rate for weighting getting to the goal as more important
-        r_goal = lr / (goal_dist + 1e-3)  # Reward the robot for being closer to the goal (avoid division by zero)
-        r_non_stationary = (self.odom_data['linear_velocity']['x'] +  
-                            self.odom_data['angular_velocity']['z'])  # Reward the robot for moving
-        reward = r_collision + r_goal + r_non_stationary
+        # Punish the robot for being close to obstacles
+        collision_mean = np.mean(self.lidar_data) 
+        r_collision = -10/np.exp(np.mean(self.lidar_data))  # Punish the robot for being far from obstacles
+
+        # Reward the robot for moving
+        r_non_stationary = (self.odom_data['linear_velocity']['x']) # Reward the robot for moving
         
-        if goal_dist <= .1:
-            self.done = True
+        # Punish the robot for flipping
+        if self.imu_data is None:
+            r_flip = 0
+        else:
+            if abs(self.imu_data['orientation']['x']) > 0.3 or abs(self.imu_data['orientation']['y']) > 0.3:
+                r_flip = -8
+            else:
+                r_flip = 0
+        
+        reward = r_collision + r_goal + r_non_stationary + r_flip
+                
+        # if goal_dist <= .1:
+        #     self.done = True
         
         return reward, self.done
 
