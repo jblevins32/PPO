@@ -1,0 +1,38 @@
+[0.685s] Invoking command in '/home/jblevins32/PPO2/src': PYTHONPATH=/home/jblevins32/PPO2/build/turtlebot3_ppo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/turtlebot3_ppo build --build-base /home/jblevins32/PPO2/build/turtlebot3_ppo/build install --record /home/jblevins32/PPO2/build/turtlebot3_ppo/install.log --single-version-externally-managed install_data
+[0.918s] running egg_info
+[0.919s] writing ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/PKG-INFO
+[0.919s] writing dependency_links to ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/dependency_links.txt
+[0.919s] writing entry points to ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/entry_points.txt
+[0.919s] writing requirements to ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/requires.txt
+[0.919s] writing top-level names to ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/top_level.txt
+[0.921s] reading manifest file '../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/SOURCES.txt'
+[0.922s] writing manifest file '../build/turtlebot3_ppo/turtlebot3_ppo.egg-info/SOURCES.txt'
+[0.922s] running build
+[0.922s] running build_py
+[0.922s] copying turtlebot3_ppo/turtlebot3_env.py -> /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo
+[0.923s] copying turtlebot3_ppo/reward_plots.py -> /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo
+[0.923s] copying turtlebot3_ppo/train.py -> /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo
+[0.923s] copying turtlebot3_ppo/deploy.py -> /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo
+[0.923s] copying turtlebot3_ppo/ppo_agent.py -> /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo
+[0.923s] running install
+[0.924s] running install_lib
+[0.924s] copying /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo/turtlebot3_env.py -> /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo
+[0.924s] copying /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo/reward_plots.py -> /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo
+[0.925s] copying /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo/train.py -> /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo
+[0.925s] copying /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo/deploy.py -> /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo
+[0.925s] copying /home/jblevins32/PPO2/build/turtlebot3_ppo/build/lib/turtlebot3_ppo/ppo_agent.py -> /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo
+[0.925s] byte-compiling /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo/turtlebot3_env.py to turtlebot3_env.cpython-310.pyc
+[0.927s] byte-compiling /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo/reward_plots.py to reward_plots.cpython-310.pyc
+[0.927s] byte-compiling /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo/train.py to train.cpython-310.pyc
+[0.928s] byte-compiling /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo/deploy.py to deploy.cpython-310.pyc
+[0.928s] byte-compiling /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo/ppo_agent.py to ppo_agent.cpython-310.pyc
+[0.929s] running install_data
+[0.929s] running install_egg_info
+[0.931s] removing '/home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo-0.0.0-py3.10.egg-info' (and everything under it)
+[0.931s] Copying ../build/turtlebot3_ppo/turtlebot3_ppo.egg-info to /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages/turtlebot3_ppo-0.0.0-py3.10.egg-info
+[0.933s] running install_scripts
+[0.952s] Installing deploy script to /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/turtlebot3_ppo
+[0.953s] Installing train script to /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/turtlebot3_ppo
+[0.953s] Installing turtlebot3_env script to /home/jblevins32/PPO2/install/turtlebot3_ppo/lib/turtlebot3_ppo
+[0.953s] writing list of installed files to '/home/jblevins32/PPO2/build/turtlebot3_ppo/install.log'
+[0.985s] Invoked command in '/home/jblevins32/PPO2/src' returned '0': PYTHONPATH=/home/jblevins32/PPO2/build/turtlebot3_ppo/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/jblevins32/PPO2/install/turtlebot3_ppo/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/turtlebot3_ppo build --build-base /home/jblevins32/PPO2/build/turtlebot3_ppo/build install --record /home/jblevins32/PPO2/build/turtlebot3_ppo/install.log --single-version-externally-managed install_data
