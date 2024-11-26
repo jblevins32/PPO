@@ -6,7 +6,9 @@ import rclpy
 import subprocess
 import torch
 from stop_robot import *
+import pandas as pd  # Add this import
 import os
+import time
 import matplotlib.pyplot as plt
 ## When using python to run:
 from turtlebot3_env import TurtleBot3Env
@@ -24,8 +26,8 @@ def main(args=None):
     env = TurtleBot3Env()
     agent = PPOAgent(env)
 
-    n_episodes = 30
-    max_timesteps = 1000
+    n_episodes = 300
+    max_timesteps = 10000
     
     # Start up turtlebot sim environment
     os.environ['TURTLEBOT3_MODEL'] = 'burger'
@@ -34,8 +36,12 @@ def main(args=None):
     
     # Setup stop object
     stop = StopRobot()
+    stop.stop_robot() # Stop the robot motion by calling stop node
+    reset_gazebo_world() # Reset the Gazebo world at the end of the episode
 
     for episode in range(n_episodes):
+        start_time = time.time() # Track training time
+        
         state = env.reset() # Initial run of the environment node to get initial states
         memory = []
         total_reward = 0
@@ -47,7 +53,9 @@ def main(args=None):
             total_reward += reward
             if done:
                 break
-            
+            t += 1
+        
+        timesteps = t    
         stop.stop_robot() # Stop the robot motion by calling stop node
         reset_gazebo_world() # Reset the Gazebo world at the end of the episode
         
@@ -55,12 +63,19 @@ def main(args=None):
         rewards.append(total_reward)
         
         # Update the policy
-        agent.train(memory, max_timesteps)
+        agent.train(memory, timesteps)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         print(f'Episode {episode + 1}/{n_episodes}, Total Reward: {total_reward}')
+        print(f"Episode elapsed time: {elapsed_time:.4f} seconds")
     
     # Save the trained model
-    torch.save(agent.actor_critic.state_dict(), 'ppo_model.pth')
+    torch.save(agent.actor_critic.state_dict(), 'ppo_model4.pth')
     env.close()
+    
+    # Save rewards to a CSV file
+    rewards_df = pd.DataFrame(rewards, columns=["Total Reward"])
+    rewards_df.to_csv('rewards4.csv', index=False)
     
     # Plot the rewards from each training episode which should increase over time
     plt.plot(rewards, color = 'blue')
