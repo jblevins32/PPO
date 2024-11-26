@@ -1,3 +1,0 @@
-[0.000000] (-) TimerEvent: {}
-[0.000212] (-) JobUnselected: {'identifier': 'turtlebot3_ppo'}
-[0.000247] (-) EventReactorShutdown: {}
